@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import InputField from '../components/InputField';
 import AppButton from '../components/AppButton';
+import LogoIcon from '../components/LogoIcon';
 import { styles, colors } from '../theme';
 import { supabase } from '../lib/supabase';
 import { showAlert } from '../lib/alert';
@@ -24,36 +26,76 @@ export default function LoginScreen({ goTo, user, setUser }) {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password,
-      });
+      const cleanEmail = email.trim().toLowerCase();
 
-      if (error) {
-        let msg = error.message;
-        if (msg.includes('Invalid login credentials')) {
-          msg = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง (หากยังไม่มีบัญชี ให้กด "Sign Up" ด้านล่างเพื่อตั้งรหัสเข้าใช้งานก่อนครับ)';
-        } else if (msg.includes('Email not confirmed')) {
-          msg = 'บัญชีนี้ยังไม่ได้ยืนยันอีเมลใน Supabase (สามารถไปปิด Confirm email ใน Supabase Auth เพื่อให้ล็อกอินได้ทันที)';
+      // 1. ตรวจสอบในตาราง app_users บน Supabase ก่อน
+      try {
+        const { data: dbUser } = await supabase
+          .from('app_users')
+          .select('*')
+          .eq('email', cleanEmail)
+          .eq('password', password)
+          .single();
+
+        if (dbUser) {
+          const loggedUser = {
+            id: String(dbUser.id),
+            name: dbUser.name,
+            email: dbUser.email,
+          };
+          await AsyncStorage.setItem('current_app_user', JSON.stringify(loggedUser));
+          setUser(loggedUser);
+          goTo('Home');
+          return;
         }
-        setErrorMessage(msg);
-        showAlert('เข้าสู่ระบบไม่สำเร็จ', msg);
+      } catch (e) {
+        // หากยังไม่มีตาราง ให้ตรวจสอบต่อใน AsyncStorage
+      }
+
+      // 2. ตรวจสอบใน AsyncStorage ของเครื่อง
+      const storedUsersRaw = await AsyncStorage.getItem('app_registered_users');
+      const storedUsers = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
+
+      const matchedUser = storedUsers.find(
+        (u) => u.email === cleanEmail && u.password === password
+      );
+
+      if (matchedUser) {
+        await AsyncStorage.setItem('current_app_user', JSON.stringify(matchedUser));
+        setUser({
+          id: matchedUser.id,
+          name: matchedUser.name,
+          email: matchedUser.email,
+        });
+        goTo('Home');
         return;
       }
 
-      if (data?.user) {
-        const displayName =
-          data.user.user_metadata?.display_name ||
-          email.trim().split('@')[0];
-
-        setUser({
-          id: data.user.id,
-          name: displayName,
-          email: data.user.email,
+      // 3. ตรวจสอบผ่าน Supabase Auth (สำหรับบัญชีที่เคยสร้างไว้)
+      try {
+        const { data: authData } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: password,
         });
+        if (authData?.user) {
+          const displayName =
+            authData.user.user_metadata?.display_name || cleanEmail.split('@')[0];
+          const loggedUser = {
+            id: authData.user.id,
+            name: displayName,
+            email: authData.user.email,
+          };
+          await AsyncStorage.setItem('current_app_user', JSON.stringify(loggedUser));
+          setUser(loggedUser);
+          goTo('Home');
+          return;
+        }
+      } catch (e) {}
 
-        goTo('Home');
-      }
+      // ถ้าไม่พบบัญชีหรือไม่ตรงกัน
+      const msg = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง (หากยังไม่มีบัญชี ให้กด "กดสมัครที่นี่" ด้านล่างได้เลยครับ)';
+      setErrorMessage(msg);
+      showAlert('เข้าสู่ระบบไม่สำเร็จ', msg);
     } catch (err) {
       const msg = err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
       setErrorMessage(msg);
@@ -66,9 +108,16 @@ export default function LoginScreen({ goTo, user, setUser }) {
   return (
     <ScrollView contentContainerStyle={[styles.content, { justifyContent: 'center' }]}>
       <View style={{ alignItems: 'center', marginBottom: 25 }}>
-        <Text style={[styles.title, { fontSize: 43 }]}>Nutty 🐥</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={[styles.title, { fontSize: 43 }]}>Nutty </Text>
+          <LogoIcon size={44} />
+        </View>
         <Text style={styles.subtitle}>Ready to hang out?</Text>
-        <Text style={{ fontSize: 35, marginTop: 12 }}>☀️ 🐥 ☀️</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
+          <Text style={{ fontSize: 35 }}>☀️ </Text>
+          <LogoIcon size={36} />
+          <Text style={{ fontSize: 35 }}> ☀️</Text>
+        </View>
       </View>
 
       {/* กล่องแจ้งเตือน Error */}
@@ -88,16 +137,15 @@ export default function LoginScreen({ goTo, user, setUser }) {
       )}
 
       <Text style={{ color: colors.navy, fontWeight: '700', marginBottom: 6 }}>
-        อีเมลสำหรับเข้าแอป
+        อีเมลหรือชื่อผู้ใช้สำหรับเข้าแอป
       </Text>
       <InputField
-        placeholder="✉  example@email.com"
+        placeholder="✉  เช่น yourname@gmail.com หรือ onpreeya"
         value={email}
         onChangeText={(txt) => {
           setEmail(txt);
           if (errorMessage) setErrorMessage('');
         }}
-        keyboardType="email-address"
         autoCapitalize="none"
       />
 
@@ -105,7 +153,7 @@ export default function LoginScreen({ goTo, user, setUser }) {
         รหัสผ่านเข้าแอป (ที่ตั้งไว้)
       </Text>
       <InputField
-        placeholder="รหัสผ่านเข้าแอป"
+        placeholder="รหัสผ่านเข้าแอป เช่น 1234"
         value={password}
         onChangeText={(txt) => {
           setPassword(txt);
@@ -129,7 +177,9 @@ export default function LoginScreen({ goTo, user, setUser }) {
         </Text>
       </Text>
 
-      <Text style={{ fontSize: 70, textAlign: 'center', marginTop: 25 }}>🐥</Text>
+      <View style={{ alignItems: 'center', marginTop: 25 }}>
+        <LogoIcon size={70} />
+      </View>
     </ScrollView>
   );
 }

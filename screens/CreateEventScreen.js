@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import InputField from '../components/InputField';
 import AppButton from '../components/AppButton';
+import LogoIcon from '../components/LogoIcon';
 import { styles, colors } from '../theme';
 
 const generateRandomCode = () => Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -33,7 +34,10 @@ export default function CreateEventScreen({ goTo, onCreate }) {
         <Text style={{ fontSize: 30, color: colors.navy, marginBottom: 15 }}>‹</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Create Event 🐥</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={styles.title}>Create Event </Text>
+        <LogoIcon size={30} />
+      </View>
       <Text style={[styles.subtitle, { marginBottom: 25 }]}>
         Let's plan something fun!
       </Text>

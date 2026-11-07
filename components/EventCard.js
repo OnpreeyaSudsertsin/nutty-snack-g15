@@ -1,9 +1,11 @@
-
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { styles, colors } from '../theme';
+import LogoIcon from './LogoIcon';
 
 export default function EventCard({ event, onPress }) {
+  const isDuck = !event.emoji || event.emoji === '🐥';
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -11,7 +13,11 @@ export default function EventCard({ event, onPress }) {
       onPress={onPress}
     >
       <View style={styles.eventImage}>
-        <Text style={{ fontSize: 37 }}>{event.emoji || '🐥'}</Text>
+        {isDuck ? (
+          <LogoIcon size={37} />
+        ) : (
+          <Text style={{ fontSize: 37 }}>{event.emoji}</Text>
+        )}
       </View>
       <View style={{ flex: 1, marginLeft: 12 }}>
         <Text style={{

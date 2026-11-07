@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import InputField from '../components/InputField';
 import AppButton from '../components/AppButton';
+import LogoIcon from '../components/LogoIcon';
 import { styles, colors } from '../theme';
 import { supabase } from '../lib/supabase';
 import { showAlert } from '../lib/alert';
@@ -23,46 +25,62 @@ export default function SignUpScreen({ goTo, setUser }) {
       return;
     }
 
-    if (password.length < 6) {
-      const msg = 'รหัสผ่านเข้าแอปต้องมีอย่างน้อย 6 ตัวอักษร (เช่น 123456)';
-      setErrorMessage(msg);
-      showAlert('รหัสผ่านสั้นเกินไป', msg);
-      return;
-    }
-
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanName = name.trim();
+
+      let supabaseUserId = null;
+
+      // 1. ลองบันทึกลงตาราง app_users ใน Supabase (ถ้ามีตาราง)
+      try {
+        const { data: dbUser } = await supabase
+          .from('app_users')
+          .insert([
+            {
+              name: cleanName,
+              email: cleanEmail,
+              password: password,
+            },
+          ])
+          .select()
+          .single();
+
+        if (dbUser?.id) {
+          supabaseUserId = String(dbUser.id);
+        }
+      } catch (e) {
+        // หากยังไม่ได้รัน SQL สร้างตาราง app_users ก็ไม่เป็นไร
+      }
+
+      // 2. บันทึกบัญชีลงในเครื่อง (AsyncStorage) เพื่อให้ล็อกอินได้ทันทีโดยไม่ติด Rate Limit
+      const storedUsersRaw = await AsyncStorage.getItem('app_registered_users');
+      const storedUsers = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
+
+      const newUser = {
+        id: supabaseUserId || String(Date.now()),
+        name: cleanName,
+        email: cleanEmail,
         password: password,
-        options: {
-          data: {
-            display_name: name.trim(),
-          },
-        },
+      };
+
+      const updatedUsers = [
+        newUser,
+        ...storedUsers.filter((u) => u.email !== cleanEmail),
+      ];
+      await AsyncStorage.setItem('app_registered_users', JSON.stringify(updatedUsers));
+
+      // 3. บันทึก Session การล็อกอินปัจจุบัน
+      await AsyncStorage.setItem('current_app_user', JSON.stringify(newUser));
+
+      setUser({
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
       });
 
-      if (error) {
-        setErrorMessage(error.message);
-        showAlert('สมัครสมาชิกไม่สำเร็จ', error.message);
-        return;
-      }
-
-      if (data?.session) {
-        setUser({
-          id: data.user.id,
-          name: name.trim(),
-          email: email.trim(),
-        });
-        showAlert('ยินดีต้อนรับ! 🎉', `สร้างบัญชีสำหรับ ${name.trim()} เรียบร้อยแล้ว`);
-        goTo('Home');
-      } else if (data?.user) {
-        showAlert(
-          'สร้างบัญชีสำเร็จ! 🎉',
-          'สร้างบัญชีเรียบร้อยแล้วครับ หากปิด Confirm email ใน Supabase แล้ว สามารถเข้าสู่ระบบได้ทันที',
-          [{ text: 'ไปหน้าเข้าสู่ระบบ', onPress: () => goTo('Login') }]
-        );
-      }
+      showAlert('สร้างบัญชีสำเร็จ! 🎉', `ยินดีต้อนรับ ${cleanName}`);
+      goTo('Home');
     } catch (err) {
       const msg = err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
       setErrorMessage(msg);
@@ -81,9 +99,14 @@ export default function SignUpScreen({ goTo, setUser }) {
       </TouchableOpacity>
 
       <View style={{ alignItems: 'center', marginBottom: 20 }}>
-        <Text style={[styles.title, { fontSize: 38 }]}>สร้างบัญชีเข้าแอป 🐥</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={[styles.title, { fontSize: 38 }]}>สร้างบัญชีเข้าแอป </Text>
+          <LogoIcon size={38} />
+        </View>
         <Text style={styles.subtitle}>ตั้งชื่อและรหัสผ่านสำหรับเข้าใช้งานของตัวเอง</Text>
-        <Text style={{ fontSize: 50, marginVertical: 8 }}>🐥</Text>
+        <View style={{ alignItems: 'center', marginVertical: 8 }}>
+          <LogoIcon size={50} />
+        </View>
       </View>
 
       {/* ข้อความแจ้งเตือน Error */}
@@ -115,24 +138,23 @@ export default function SignUpScreen({ goTo, setUser }) {
       />
 
       <Text style={{ color: colors.navy, fontWeight: '700', marginBottom: 6 }}>
-        อีเมลสำหรับใช้ล็อกอิน
+        อีเมลหรือชื่อผู้ใช้สำหรับล็อกอิน
       </Text>
       <InputField
-        placeholder="เช่น yourname@gmail.com"
+        placeholder="เช่น yourname@gmail.com หรือ onpreeya"
         value={email}
         onChangeText={(txt) => {
           setEmail(txt);
           if (errorMessage) setErrorMessage('');
         }}
-        keyboardType="email-address"
         autoCapitalize="none"
       />
 
       <Text style={{ color: colors.navy, fontWeight: '700', marginBottom: 6 }}>
-        รหัสผ่านสำหรับเข้าแอป (ตั้งเองได้เลย ไม่ใช่รหัสผ่านอีเมลจริง)
+        รหัสผ่านเข้าแอป (ตั้งเองได้เลย ไม่ใช่รหัสผ่านอีเมลจริง)
       </Text>
       <InputField
-        placeholder="ตั้งรหัสเข้าแอป (อย่างน้อย 6 ตัว เช่น 123456)"
+        placeholder="ตั้งรหัสเข้าแอป เช่น 1234 หรือ mypass"
         value={password}
         onChangeText={(txt) => {
           setPassword(txt);

@@ -9,6 +9,7 @@ import {
 
 import InputField from '../components/InputField';
 import AppButton from '../components/AppButton';
+import LogoIcon from '../components/LogoIcon';
 import { styles, colors } from '../theme';
 
 export default function JoinEventScreen({
@@ -123,13 +124,9 @@ export default function JoinEventScreen({
           to share it with you.
         </Text>
 
-        <Text style={{
-          textAlign: 'center',
-          fontSize: 55,
-          marginTop: 25,
-        }}>
-          🐥
-        </Text>
+        <View style={{ alignItems: 'center', marginTop: 25 }}>
+          <LogoIcon size={55} />
+        </View>
       </ScrollView>
     </View>
   );

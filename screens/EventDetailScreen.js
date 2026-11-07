@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import AppButton from '../components/AppButton';
+import LogoIcon from '../components/LogoIcon';
 import { styles, colors } from '../theme';
 import { showAlert } from '../lib/alert';
 
@@ -44,7 +45,11 @@ export default function EventDetailScreen({
         backgroundColor: colors.yellowLight, borderRadius: 24,
         alignItems: 'center', padding: 30, marginBottom: 20,
       }}>
-        <Text style={{ fontSize: 90 }}>{event.emoji || '🐥'}</Text>
+        {(!event.emoji || event.emoji === '🐥') ? (
+          <LogoIcon size={90} />
+        ) : (
+          <Text style={{ fontSize: 90 }}>{event.emoji}</Text>
+        )}
         <Text style={[styles.title, { fontSize: 23, textAlign: 'center', marginTop: 12 }]}>
           {event.title}
         </Text>

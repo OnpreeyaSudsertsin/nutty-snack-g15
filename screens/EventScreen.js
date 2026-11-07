@@ -10,6 +10,7 @@ import {
 
 import EventCard from '../components/EventCard';
 import BottomNav from '../components/BottomNav';
+import LogoIcon from '../components/LogoIcon';
 
 export default function EventScreen({
   goTo,
@@ -89,7 +90,7 @@ export default function EventScreen({
             Event
           </Text>
 
-          <Text style={{ fontSize: 32 }}>🐥</Text>
+          <LogoIcon size={36} />
         </View>
 
         {/* Search input */}

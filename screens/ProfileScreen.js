@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import BottomNav from '../components/BottomNav';
+import LogoIcon from '../components/LogoIcon';
 import { styles, colors } from '../theme';
 import { supabase } from '../lib/supabase';
 import { showAlert } from '../lib/alert';
@@ -53,7 +54,7 @@ export default function ProfileScreen({
             {user.name || 'Amy'} ✎
           </Text>
           <Text style={styles.subtitle}>{user.email || 'amy@example.com'}</Text>
-          <Text style={{ fontSize: 36, marginTop: 8 }}>🐥</Text>
+          <LogoIcon size={36} style={{ marginTop: 8 }} />
         </View>
 
         <View style={{
