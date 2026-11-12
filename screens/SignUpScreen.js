@@ -19,9 +19,9 @@ export default function SignUpScreen({ goTo, setUser }) {
     setErrorMessage('');
 
     if (!name.trim() || !email.trim() || !password.trim()) {
-      const msg = 'กรุณากรอกข้อมูลให้ครบทุกช่อง';
+      const msg = 'Please fill in all fields.';
       setErrorMessage(msg);
-      showAlert('ข้อมูลไม่ครบถ้วน', msg);
+      showAlert('Missing Information', msg);
       return;
     }
 
@@ -32,7 +32,6 @@ export default function SignUpScreen({ goTo, setUser }) {
 
       let supabaseUserId = null;
 
-      // 1. ลองบันทึกลงตาราง app_users ใน Supabase (ถ้ามีตาราง)
       try {
         const { data: dbUser } = await supabase
           .from('app_users')
@@ -49,11 +48,8 @@ export default function SignUpScreen({ goTo, setUser }) {
         if (dbUser?.id) {
           supabaseUserId = String(dbUser.id);
         }
-      } catch (e) {
-        // หากยังไม่ได้รัน SQL สร้างตาราง app_users ก็ไม่เป็นไร
-      }
+      } catch (e) {}
 
-      // 2. บันทึกบัญชีลงในเครื่อง (AsyncStorage) เพื่อให้ล็อกอินได้ทันทีโดยไม่ติด Rate Limit
       const storedUsersRaw = await AsyncStorage.getItem('app_registered_users');
       const storedUsers = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
 
@@ -69,8 +65,6 @@ export default function SignUpScreen({ goTo, setUser }) {
         ...storedUsers.filter((u) => u.email !== cleanEmail),
       ];
       await AsyncStorage.setItem('app_registered_users', JSON.stringify(updatedUsers));
-
-      // 3. บันทึก Session การล็อกอินปัจจุบัน
       await AsyncStorage.setItem('current_app_user', JSON.stringify(newUser));
 
       setUser({
@@ -79,10 +73,10 @@ export default function SignUpScreen({ goTo, setUser }) {
         email: newUser.email,
       });
 
-      showAlert('สร้างบัญชีสำเร็จ! 🎉', `ยินดีต้อนรับ ${cleanName}`);
+      showAlert('Account Created! 🎉', `Welcome, ${cleanName}!`);
       goTo('Home');
     } catch (err) {
-      const msg = err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
+      const msg = err.message || 'An error occurred. Please try again.';
       setErrorMessage(msg);
       showAlert('Error', msg);
     } finally {
@@ -94,22 +88,21 @@ export default function SignUpScreen({ goTo, setUser }) {
     <ScrollView contentContainerStyle={styles.content}>
       <TouchableOpacity onPress={() => goTo('Login')}>
         <Text style={{ fontSize: 18, color: colors.navy, marginBottom: 15 }}>
-          ‹ ย้อนกลับ
+          ‹ Back
         </Text>
       </TouchableOpacity>
 
       <View style={{ alignItems: 'center', marginBottom: 20 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={[styles.title, { fontSize: 38 }]}>สร้างบัญชีเข้าแอป </Text>
+          <Text style={[styles.title, { fontSize: 38 }]}>Sign Up </Text>
           <LogoIcon size={38} />
         </View>
-        <Text style={styles.subtitle}>ตั้งชื่อและรหัสผ่านสำหรับเข้าใช้งานของตัวเอง</Text>
+        <Text style={styles.subtitle}>Create your profile to get started</Text>
         <View style={{ alignItems: 'center', marginVertical: 8 }}>
           <LogoIcon size={50} />
         </View>
       </View>
 
-      {/* ข้อความแจ้งเตือน Error */}
       {!!errorMessage && (
         <View style={{
           backgroundColor: '#FFF0F0',
@@ -126,10 +119,10 @@ export default function SignUpScreen({ goTo, setUser }) {
       )}
 
       <Text style={{ color: colors.navy, fontWeight: '700', marginBottom: 6 }}>
-        ชื่อที่ต้องการให้แสดงในแอป
+        Display Name
       </Text>
       <InputField
-        placeholder="เช่น Amy หรือ Onpreeya"
+        placeholder="e.g. Amy"
         value={name}
         onChangeText={(txt) => {
           setName(txt);
@@ -138,10 +131,10 @@ export default function SignUpScreen({ goTo, setUser }) {
       />
 
       <Text style={{ color: colors.navy, fontWeight: '700', marginBottom: 6 }}>
-        อีเมลหรือชื่อผู้ใช้สำหรับล็อกอิน
+        Email or Username
       </Text>
       <InputField
-        placeholder="เช่น yourname@gmail.com หรือ onpreeya"
+        placeholder="e.g. amy@example.com"
         value={email}
         onChangeText={(txt) => {
           setEmail(txt);
@@ -151,10 +144,10 @@ export default function SignUpScreen({ goTo, setUser }) {
       />
 
       <Text style={{ color: colors.navy, fontWeight: '700', marginBottom: 6 }}>
-        รหัสผ่านเข้าแอป (ตั้งเองได้เลย ไม่ใช่รหัสผ่านอีเมลจริง)
+        Password
       </Text>
       <InputField
-        placeholder="ตั้งรหัสเข้าแอป เช่น 1234 หรือ mypass"
+        placeholder="Create a password"
         value={password}
         onChangeText={(txt) => {
           setPassword(txt);
@@ -164,17 +157,17 @@ export default function SignUpScreen({ goTo, setUser }) {
       />
 
       <AppButton
-        title={loading ? 'กำลังสร้างบัญชี...' : 'สร้างบัญชีเข้าแอป     →'}
+        title={loading ? 'Creating...' : 'Sign Up     →'}
         onPress={signup}
       />
 
       <Text style={{ textAlign: 'center', marginTop: 25, color: colors.navy, fontSize: 15 }}>
-        มีบัญชีอยู่แล้วใช่ไหม?{' '}
+        Already have an account?{' '}
         <Text
           style={{ color: colors.red, textDecorationLine: 'underline', fontWeight: '800' }}
           onPress={() => goTo('Login')}
         >
-          เข้าสู่ระบบ (Sign In)
+          Sign In
         </Text>
       </Text>
     </ScrollView>

@@ -5,6 +5,7 @@ import LogoIcon from './LogoIcon';
 
 export default function EventCard({ event, onPress }) {
   const isDuck = !event.emoji || event.emoji === '🐥';
+  const isFinalized = Boolean(event.finalDate || event.status === 'finalized');
 
   return (
     <TouchableOpacity
@@ -20,20 +21,57 @@ export default function EventCard({ event, onPress }) {
         )}
       </View>
       <View style={{ flex: 1, marginLeft: 12 }}>
-        <Text style={{
-          color: colors.navy, fontSize: 13,
-          fontWeight: '800', marginBottom: 7,
-        }}>
-          {event.title}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <Text
+            numberOfLines={1}
+            style={{
+              flex: 1,
+              color: colors.navy,
+              fontSize: 14,
+              fontWeight: '800',
+            }}
+          >
+            {event.title}
+          </Text>
+          {isFinalized ? (
+            <View
+              style={{
+                backgroundColor: '#D1FADF',
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 6,
+                marginLeft: 4,
+              }}
+            >
+              <Text style={{ color: '#027A48', fontSize: 10, fontWeight: '800' }}>
+                Finalized
+              </Text>
+            </View>
+          ) : (
+            <View
+              style={{
+                backgroundColor: colors.yellowLight,
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 6,
+                marginLeft: 4,
+              }}
+            >
+              <Text style={{ color: colors.navy, fontSize: 10, fontWeight: '800' }}>
+                Voting
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={{ color: colors.gray, fontSize: 11, marginBottom: 3 }}>
+          🗓️ {isFinalized && event.finalDate ? `Date: ${event.finalDate}` : event.date}
         </Text>
-        <Text style={{ color: colors.gray, fontSize: 11, marginBottom: 4 }}>
-          🗓️ {event.date}
-        </Text>
-        <Text style={{ color: colors.gray, fontSize: 11 }}>
-          📍 {event.place}
+        <Text numberOfLines={1} style={{ color: colors.gray, fontSize: 11 }}>
+          📍 {event.place || 'Various Locations'}
         </Text>
       </View>
-      <Text style={{ color: colors.navy, fontSize: 27 }}>›</Text>
+      <Text style={{ color: colors.navy, fontSize: 27, marginLeft: 4 }}>›</Text>
     </TouchableOpacity>
   );
 }

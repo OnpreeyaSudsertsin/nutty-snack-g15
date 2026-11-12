@@ -18,9 +18,9 @@ export default function LoginScreen({ goTo, user, setUser }) {
     setErrorMessage('');
 
     if (!email.trim() || !password.trim()) {
-      const msg = 'กรุณากรอกทั้งอีเมลและรหัสผ่านเข้าแอป';
+      const msg = 'Please enter both email and password.';
       setErrorMessage(msg);
-      showAlert('ข้อมูลไม่ครบถ้วน', msg);
+      showAlert('Missing Information', msg);
       return;
     }
 
@@ -28,7 +28,7 @@ export default function LoginScreen({ goTo, user, setUser }) {
       setLoading(true);
       const cleanEmail = email.trim().toLowerCase();
 
-      // 1. ตรวจสอบในตาราง app_users บน Supabase ก่อน
+      // 1. Supabase app_users table
       try {
         const { data: dbUser } = await supabase
           .from('app_users')
@@ -48,11 +48,9 @@ export default function LoginScreen({ goTo, user, setUser }) {
           goTo('Home');
           return;
         }
-      } catch (e) {
-        // หากยังไม่มีตาราง ให้ตรวจสอบต่อใน AsyncStorage
-      }
+      } catch (e) {}
 
-      // 2. ตรวจสอบใน AsyncStorage ของเครื่อง
+      // 2. AsyncStorage
       const storedUsersRaw = await AsyncStorage.getItem('app_registered_users');
       const storedUsers = storedUsersRaw ? JSON.parse(storedUsersRaw) : [];
 
@@ -71,7 +69,7 @@ export default function LoginScreen({ goTo, user, setUser }) {
         return;
       }
 
-      // 3. ตรวจสอบผ่าน Supabase Auth (สำหรับบัญชีที่เคยสร้างไว้)
+      // 3. Supabase Auth
       try {
         const { data: authData } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
@@ -92,12 +90,11 @@ export default function LoginScreen({ goTo, user, setUser }) {
         }
       } catch (e) {}
 
-      // ถ้าไม่พบบัญชีหรือไม่ตรงกัน
-      const msg = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง (หากยังไม่มีบัญชี ให้กด "กดสมัครที่นี่" ด้านล่างได้เลยครับ)';
+      const msg = 'Invalid email or password.';
       setErrorMessage(msg);
-      showAlert('เข้าสู่ระบบไม่สำเร็จ', msg);
+      showAlert('Login Failed', msg);
     } catch (err) {
-      const msg = err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
+      const msg = err.message || 'An error occurred. Please try again.';
       setErrorMessage(msg);
       showAlert('Error', msg);
     } finally {
@@ -120,7 +117,6 @@ export default function LoginScreen({ goTo, user, setUser }) {
         </View>
       </View>
 
-      {/* กล่องแจ้งเตือน Error */}
       {!!errorMessage && (
         <View style={{
           backgroundColor: '#FFF0F0',
@@ -137,10 +133,10 @@ export default function LoginScreen({ goTo, user, setUser }) {
       )}
 
       <Text style={{ color: colors.navy, fontWeight: '700', marginBottom: 6 }}>
-        อีเมลหรือชื่อผู้ใช้สำหรับเข้าแอป
+        Email or Username
       </Text>
       <InputField
-        placeholder="✉  เช่น yourname@gmail.com หรือ onpreeya"
+        placeholder="e.g. amy@example.com"
         value={email}
         onChangeText={(txt) => {
           setEmail(txt);
@@ -150,10 +146,10 @@ export default function LoginScreen({ goTo, user, setUser }) {
       />
 
       <Text style={{ color: colors.navy, fontWeight: '700', marginBottom: 6 }}>
-        รหัสผ่านเข้าแอป (ที่ตั้งไว้)
+        Password
       </Text>
       <InputField
-        placeholder="รหัสผ่านเข้าแอป เช่น 1234"
+        placeholder="Enter your password"
         value={password}
         onChangeText={(txt) => {
           setPassword(txt);
@@ -163,17 +159,17 @@ export default function LoginScreen({ goTo, user, setUser }) {
       />
 
       <AppButton
-        title={loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ (Sign In)     →'}
+        title={loading ? 'Signing in...' : 'Sign In     →'}
         onPress={login}
       />
 
       <Text style={{ textAlign: 'center', marginTop: 25, color: colors.navy, fontSize: 15 }}>
-        ยังไม่มีบัญชีเข้าแอปใช่ไหม?{' '}
+        Don't have an account?{' '}
         <Text
           style={{ color: colors.red, textDecorationLine: 'underline', fontWeight: '800' }}
           onPress={() => goTo('SignUp')}
         >
-          กดสมัครที่นี่ (Sign Up)
+          Sign Up
         </Text>
       </Text>
 
